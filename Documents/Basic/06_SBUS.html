@@ -103,52 +103,77 @@
 
         <h2>回路</h2>
 
+        <p>ブレットボードの図を用意したので、これと同じ回路を組んでみよう</p>
+        <p>少し難しいので、先輩にチェックしてもらおう</p>
         
-        
+        （回路図を添付）
 
         <h2>プログラム</h2>
 
+        <p>今回は、プロポから送られてくるデータをSTM32で受信して必要なデータを取り出す</p>
+
+        <p>プロポから送られてくるデータはSBUSと呼ばれる形式で、工夫することでシリアル通信と同じように受信ができる</p>
+
+        <P>データを分解するコードは少し難しいので、事前に用意したものを使ってね</p>
+
         <h2>サンプルコード</h2>
-        <p>実際にDMAを使って受信したデータを送り返すコードを作成した</p>
-        <p>TeraTermでアルファベット1文字を送信して、同じ文字が帰ってくることを確かめてみよう</p>
-        <pre><code class="language-cpp">uint8_t data[1];
+    
+        <pre><code class="language-cpp">#include "wrapper.hpp"
+#include "usart.h"
+
+uint8_t  receive_buffer[25];
+uint16_t sbus_data[10] = {};
 
 void init(){
 
-    //LEDをつける
-    HAL_GPIO_WritePin(GPIOA,GPIO_PIN_5, GPIO_PIN_SET);
-
     //割り込みの開始
-    HAL_UART_Receive_DMA(&huart2, data, 1);
-}            
+    HAL_UART_Receive_DMA(&huart3, receive_buffer, 25);
+}     
+
 void loop(){
     
-    //LEDを点滅させる
-    HAL_GPIO_TogglePin(GPIOA,GPIO_PIN);
+    //受信したデータをPCに送信
+    for(int i = 0; i < 10; i++){
+
+        std::string str = std::to_string(sbus_data[i]) + " ";
+	    HAL_UART_Transmit(&huart2, (uint8_t *)str.c_str(),str.length(),100);
+    }
+
+    str = "\n";
+	HAL_UART_Transmit(&huart2, (uint8_t *)str.c_str(),str.length(),100);
 
 }
+
 //データを受信したら呼び出される
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 
-    //受信したデータを送り返す
-    HAL_UART_Transmit(&huart2, data, 1, 1000);
+    //データがSBUSの形式であるか確認
+	if(receive_buffer[0] == 0x0F && receive_buffer[24] == 0x00){
 
-    //割り込み受信の再開
-    HAL_UART_Receive_DMA(&huart2, data, 1);
+		SBUS_decode();//SUBSデータの分解
+    }
 
+    //受信の再開
+    HAL_UART_Receive_DMA(&huart3, receive_buffer, 25);
+}
+
+//SBUSからデータを取り出すプログラム
+void SBUS_decode(){
+
+    sbus_data[0]  = (receive_buffer[1]        | receive_buffer[2] << 8)   & 0x07FF;
+    sbus_data[1]  = (receive_buffer[2] >> 3   | receive_buffer[3] << 5)   & 0x07FF;
+    sbus_data[2]  = (receive_buffer[3] >> 6   | receive_buffer[4] << 2    | receive_buffer[5] << 10) & 0x07FF;
+    sbus_data[3]  = (receive_buffer[5] >> 1   | receive_buffer[6] << 7)   & 0x07FF;
+    sbus_data[4]  = (receive_buffer[6] >> 4   | receive_buffer[7] << 4)   & 0x07FF;
+    sbus_data[5]  = (receive_buffer[7] >> 7   | receive_buffer[8] << 1    | receive_buffer[9] << 9) & 0x07FF;
+    sbus_data[6]  = (receive_buffer[9] >> 2   | receive_buffer[10] << 6)  & 0x07FF;
+    sbus_data[7]  = (receive_buffer[10] >> 5  | receive_buffer[11] << 3)  & 0x07FF;
+    sbus_data[8]  = (receive_buffer[12]       | receive_buffer[13] << 8)  & 0x07FF;
+    sbus_data[9]  = (receive_buffer[13] >> 3  | receive_buffer[14] << 5)  & 0x07FF;
 }</code></pre>
 
-<details>
-    <summary>TeraTermでのデータ送信方法</summary>
-    <br>
-    <ul>
-        <li><strong>ローカルエコーの有効化</strong></li>
-        <p>設定(S)から端末(T)を開き、ローカルエコー(L)を有効化しよう</p>
-        <p>これでキーボード入力でデータを送信できる</p>
-    </ul>
-</details>
         <h2>終わりに</h2>
-        <p>今回は、割り込み処理を使ったデータ受信について紹介しました！</p>
+        <p>今回は、SBUSの受信を実際にやってみました!</p>
     </main>
     <footer>
         <p>&copy; 2025 東京農工大学 航空研究会</p>
