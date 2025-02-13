@@ -98,7 +98,7 @@
         <p>画像のように<strong>PA2とPA3にUSART_RX（受信）とUSART_TX（送信）</strong>を割り当ててみよう</p>
         <p>(すでに割り当てられている場合は確認して次に進もう)</p>
 
-        <img src="02_Pin.png">
+        <img src="Pin.png">
         
         <h2>プログラム</h2>
 
@@ -136,7 +136,7 @@
         
         <pre><code class="language-cpp">uint16_t count = 0;
 
-void init(){
+void init(){ 
 
     uint8_t str[] = "Hello World";
     HAL_UART_Transmit(&huart2, str,11,100);//strの中身を送信
@@ -181,7 +181,7 @@ std::string str = "count:" + std::to_string(count++) + "\n";</code></pre>
             </ul>
         </div>
 
-        <img src="02_TeraTerm.png">
+        <img src="TeraTerm.png">
 
         <details>
             <summary>文字化けや改行がおかしいときは</summary>
