@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STM32でI2C</title>
+    <title>STM32_PWM</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
     <style>
         body {
@@ -78,111 +78,161 @@
     <main>
         
         <h3>STM32資料 応用編 1</h3>
-        <h1>STM32でI2C通信をやってみよう</h1>
-        <p>なるべく簡単な説明でセンサーとの通信ができるようにしていきます！</p>
-        <h2>I2C通信とは</h2>
-        <p>センサーなどと通信するときによく使う！</p>
-        <p>配線も少なく、（比較的）簡単に実装できるのでおすすめ</p>
-        <p>いくつか特徴があるので、3つだけ紹介してみる</p>
+        <h1>I2C通信をやってみよう</h1>
+        <p>今回はセンサーとの通信でよく使うI2C通信について説明します</p>
+        <p>実際にセンサーから値を取るのは次回にやるので、今回は説明だけになります</p>
+
+        <h2>今回やること</h2>
         <div class="note">
-            <h3>I2C通信の特徴</h3>
+            <h3>作業の流れ</h3>
             <ul>
-                <li>通信速度がそこそこ早い</li>
-                <li>データとクロック用に2本の線を使う</li>
-                <li>複数のセンサーなどを同じ配線で扱える</li>
+                <li>ピンを割り当てる</li>
+                <li>wrapper.cppにコードを書き込む</li>
+                <li>サーボモーターとSTM32を配線でつなぐ</li>
+                <li>STM32にプログラムを書き込み実行する</li>
             </ul>
         </div>
-        <h2>I2C通信をするために</h2>
-        <p>I2C通信の細かい説明をすると、結構難しくなってしまうので</p>
-        <p>ここでは、プログラムを書く上な要素を4つ紹介しておきます</p>
+
+        <h2>ピンの割り当て</h2>
+        <p>今回はPWMという機能を使います</p>
+        <p>(プロジェクト名).iocからPA8を選択し、TIM1_CH1を割り当てよう</p>
+
+        <p>TIM1の設定からChannel1にPWM Generation CH1を割り当てよう</p>
+
+        (画像を添付する)
+
+        <p>下のConfigurationからParameter Settingsを開き詳細な設定をしよう</p>
+
         <div class="note">
-            <h3>I2C通信で使う4要素</h3>
+            <h3>Parameter Settings</h3>
+
+            <p>各項目を以下のように設定してね</p>
             <ul>
-                <li>データを送る相手（I2Cアドレス)</li>
-                <li>データの送信場所 (レジスタアドレス）</li>
-                <li>送信/受信するデータ (データ)</li>
-                <li>データの長さ（データ長）</li>
+                <li>Prescaler <br> 83</li>
+                <li>Counter Mode <br>UP</li>
+                <li>Counter Period <br> 2499</li>
             </ul>
-        </div>
-        <h2>STM32でI2C通信をする方法</h2>
-        <h3>ピン設定について</h3>
-        <p>SCL（クロック）とSDA（データ）用の2つのピンを設定しよう</p>
-        <p>設定項目が色々出てくるけど、基本はそのままで大丈夫！</p>
-        <h3>プログラムについて</h3>
-        <p>センサーとの通信で使う関数はこの2つになる</p>
-        <pre><code class="language-cpp">HAL_I2C_Mem_Read(&hi2c2, I2C_ADDR, REGISTER, 1, &receive_data, 1, 10);</code></pre>
-        <div class="note">
-            <h3>この関数の引数について</h3>
-            <ul>
-                <li>&hi2c2   ・・・使うi2cのピン</li>
-                <li>I2C_ADDR・・・I2Cアドレス</li>
-                <li>REGISTER・・・レジスタアドレス</li>
-                <li>○○○_data・・・送信/受信するデータ（ポインタ）</li>
-            </ul>
-        </div>
+        </div> 
+
         <details>
-            <summary>細かいお話</summary>
+            <summary>この設定でやっていること</summary>
             <br>
             <ul>
-                <li><strong>一番最後の'10'という引数について</strong>
-                    <p>これは、最大時間を設定している。通常は一瞬で通信が成功するが、上手くいかなかったときこの数字の秒数（単位はms)で諦めるように設定できる。</p>
-                </li>
-                <li><strong>REGISTERと&send_dataの後の'1'という引数について</strong>
-                    <p>これは、隣り合う複数のレジスタに一度に書き込むときに使う。例えば、0x10から0x12までの3つのレジスタに書き込みたいときは、send_data[3]のように3つの要素を持つ配列とセットでこのように書くことができる。</p>
-                    <pre><code class="language-cpp">HAL_I2C_Mem_Write(&hi2c2, I2C_ADDR, 0x10, 3, send_data, 3, 10);</code></pre>
-                    <p>センサーの値などはxyzのデータが近いレジスタにあることがほとんどなので、知っておくと便利かも。</p>
-                </li>
+                <li><strong>タイマー設定</strong>
+                    <p>サーボモーターは、パルス信号（周期的にオン・オフが切り替わる）の周期で角度を指定している</p>
+                    <p>この設定をすることで、STM32のクロック（計算処理とかをしている部分）をサーボモーターに送りたい周期に変換している</p>
+                    <p>詳細な話は難しいので、気になる人はこのページを読んでみるといいかも？</p>
+                    https://qiita.com/ShunHattori/items/68f099f1d77702d2535d
             </ul>
-        </details>
-        <h2>サンプルコード</h2>
-        <p>それっぽいセンサーの値を用意をしてみました。実際の値は、センサーのデータシートなどに記載があるのでそちらを見てね。</p>
+        </details>        
+
+        <h2>回路</h2>
+
+        <p>サーボモーターとSTM32をジャンパー線を使ってつなぐ</p>
+
+        <p><strong>配線を間違えるとサーボモーターが壊れてしまうことがあるので気を付けてください</strong></p>
+        <p><strong>真ん中の5Vだけは絶対に間違えないようにしよう！</strong></p>
+
+        <h3>配線図</h3>
         <table>
             <thead>
                 <tr>
-                    <th>名前</th>
-                    <th>値</th>
+                    <th>用途</th>
+                    <th>STM32</th>
+                    <th>サーボモーター</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td>使うピン</td>
-                    <td>i2c2</td>
+                    <td>信号線</td>
+                    <td>D7(PA8に対応)</td>
+                    <td>黄色</td>
                 </tr>
                 <tr>
-                    <td>I2Cアドレス</td>
-                    <td>0x68</td>
+                    <td>5V線</td>
+                    <td>5V</td>
+                    <td>赤色</td>
                 </tr>
                 <tr>
-                    <td>REGISTER</td>
-                    <td>0x01</td>
+                    <td>GND線</td>
+                    <td>GND</td>
+                    <td>黒色</td>
                 </tr>
-                <tr>
-                    <td>送信データ</td>
-                    <td>0x15</td>
-                </tr>
+
             </tbody>
         </table>
-        <p>コードの中身としては、あらかじめ決めたレジスタに値を書き込んでその値が保存されているかを実際に読み取ってチェックするものです。</p>
-        <pre><code class="language-cpp">
-uint8_t I2C_ADDR = 0x68 << 1;
-uint8_t TEST_REGISTER = 0x01;
-uint8_t send_data = 0x15;
-uint8_t receive_data = 0;
+        
+        (画像を添付する/ブレットボードのやつ)
+        
+        <h2>プログラム</h2>
 
-//値の書き込み
-HAL_I2C_Mem_Write(&hi2c2, I2C_ADDR, TEST_REGISTER, 1, &send_data, 1, 10);
+        <p>今回はタイマーのスタートと値の設定の2つの関数を使用します</p>
 
-//値の読み取り
-HAL_I2C_Mem_Read(&hi2c2, I2C_ADDR, TEST_REGISTER, 1,&receive_data, 1, 10);
+        <h3>TIMのスタート</h3>
+        <p>指定したタイマーを起動するための関数</p>
+        <pre><code class="language-cpp">HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);</code></pre>
 
-//データの判定
-if(send_data == receive_data){
-  //成功した時の処理
-}  
-        </code></pre>
+        <div class="note">
+            <h3>この関数の引数</h3>
+            <ul>
+                <li>&htim1 <br> 使用するTIMの種類・・・TIM1を使用</li>
+                <li>TIM_CHANNEL_1 <br>使用するTIMのチャンネル・・・CH1を使用</li>
+            </ul>
+        </div>   
+
+        <h3>TIMの設定</h3>
+        <p>起動したタイマーの値を設定するための関数</p>
+        <pre><code class="language-cpp">__HAL_TIM_SET_COMPARE(&htim1 , TIM_CHANNEL_1, Value);</code></pre>
+
+        <div class="note">
+            <h3>この関数の引数</h3>
+            <ul>
+                <li>&htim1 <br> 使用するTIMの種類・・・TIM1を使用</li>
+                <li>TIM_CHANNEL_1 <br>使用するTIMのチャンネル・・・CH1を使用</li>
+                <li>Value <br>設定したい値(0~65535),</li>
+            </ul>
+        </div> 
+
+        <details>
+            <summary>TIMを止める関数</summary>
+
+            <p>今回は使用しないが、安全装置などの設計をする上で止める関数が使えるので紹介しておく</p>
+        
+            <pre><code class="language-cpp">HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);</code></pre>
+
+            <p>引数はスタートの関数と同じなので頭の片隅においておくといいかも?</p>
+
+        </details>  
+
+
+        <h2>サンプルコード</h2>
+        <p>実際にサーボモータを回し続けるコードを作成した</p>
+        <p>0~2500の好きな値を指定できるので、色々な値を試してみよう</p>
+        <pre><code class="language-cpp">#include "wrapper.hpp"
+#include "tim.h"
+
+void init(){
+    
+    //タイマーの起動
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+    HAL_Delay(500);     
+}
+        
+void loop(){
+    
+    //値の設定
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 500);
+    HAL_Delay(100-);
+        
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 1000);
+    HAL_Delay(1000);
+        
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 1500);
+    HAL_Delay(1000);
+}</code></pre>
+
         <h2>終わりに</h2>
-        <p>適当な説明でしたが、少しでも理解の助けになれたらうれしいです！</p>
-        <p>データシートの読み方も解説しようと思います！</p>
+        <p>今回は、タイマーを使ってサーボモータを動かしてみました</p>
     </main>
     <footer>
         <p>&copy; 2025 東京農工大学 航空研究会</p>
