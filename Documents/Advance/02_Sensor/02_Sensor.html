@@ -77,7 +77,7 @@
 <body>
     <main>
         
-        <h3>STM32資料 応用編 1</h3>
+        <h3>STM32資料 応用編 2</h3>
         <h1>センサーの値を読んでみよう</h1>
         <p>今回はICM45686という加速度と角速度の値を取ることができるセンサーを使う</p>
 
@@ -95,16 +95,14 @@
         <h2>ピンの割り当て</h2>
 
         <p>今回はI2Cという機能を使います</p>
-        <p>PAとPAにI2C2を割り当てよう</p>
+        <p>PB10とPB3にI2C2のSCL（クロック線）とSDA(データ線)を割り当てよう</p>
 
-        (画像を添付する)     
+        <img src="Pin.png">    
 
         <h2>回路</h2>
 
-        <p>ICM45686と</p>
-
-        <p><strong>配線を間違えるとサーボモーターが壊れてしまうことがあるので気を付けてください</strong></p>
-        <p><strong>真ん中の5Vだけは絶対に間違えないようにしよう！</strong></p>
+        <p>ICM45686とSTM32をつなぎます</p>
+        <p>6本の配線を画像の位置に繋いでね</p>
 
         <h3>配線図</h3>
         <table>
@@ -112,100 +110,152 @@
                 <tr>
                     <th>用途</th>
                     <th>STM32</th>
-                    <th>サーボモーター</th>
+                    <th>ICM45686</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td>信号線</td>
-                    <td>D7(PA8に対応)</td>
-                    <td>黄色</td>
+                    <td>クロック線</td>
+                    <td>D6(PB10に対応)</td>
+                    <td>CN1_16</td>
+                </tr>
+                <tr>
+                    <td>データ線</td>
+                    <td>D3(PB3に対応)</td>
+                    <td>CN1_18</td>
                 </tr>
                 <tr>
                     <td>5V線</td>
                     <td>5V</td>
-                    <td>赤色</td>
+                    <td>CN1_19</td>
                 </tr>
                 <tr>
                     <td>GND線</td>
                     <td>GND</td>
-                    <td>黒色</td>
+                    <td>CN1_13</td>
                 </tr>
 
             </tbody>
         </table>
-        
-        (画像を添付する/ブレットボードのやつ)
+
+        <img src="Circuit.png">   
         
         <h2>プログラム</h2>
 
-        <p>今回はタイマーのスタートと値の設定の2つの関数を使用します</p>
+        <p>今回は、事前に作成してある通信用のライブラリを使ってもらいます</p>
 
-        <h3>TIMのスタート</h3>
-        <p>指定したタイマーを起動するための関数</p>
-        <pre><code class="language-cpp">HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);</code></pre>
+        <a href= "https://github.com/aoi-256/STM32_ICM45686" ><h3>・ライブラリのリンク</h3></a>
 
-        <div class="note">
-            <h3>この関数の引数</h3>
-            <ul>
-                <li>&htim1 <br> 使用するTIMの種類・・・TIM1を使用</li>
-                <li>TIM_CHANNEL_1 <br>使用するTIMのチャンネル・・・CH1を使用</li>
-            </ul>
-        </div>   
-
-        <h3>TIMの設定</h3>
-        <p>起動したタイマーの値を設定するための関数</p>
-        <pre><code class="language-cpp">__HAL_TIM_SET_COMPARE(&htim1 , TIM_CHANNEL_1, Value);</code></pre>
-
-        <div class="note">
-            <h3>この関数の引数</h3>
-            <ul>
-                <li>&htim1 <br> 使用するTIMの種類・・・TIM1を使用</li>
-                <li>TIM_CHANNEL_1 <br>使用するTIMのチャンネル・・・CH1を使用</li>
-                <li>Value <br>設定したい値(0~65535),</li>
-            </ul>
-        </div> 
+        <p>ここから、OO.hのファイルをCore/IncにOO.cppのファイルをCore/Srcにコピーしよう</p>
 
         <details>
-            <summary>TIMを止める関数</summary>
+            <summary>OO.hやOO.cppはなんのファイル？</summary>
 
-            <p>今回は使用しないが、安全装置などの設計をする上で止める関数が使えるので紹介しておく</p>
-        
-            <pre><code class="language-cpp">HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);</code></pre>
+            <p>難しい話なので、今はコピペで動けば大丈夫!</p>
 
-            <p>引数はスタートの関数と同じなので頭の片隅においておくといいかも?</p>
+            <p>C++のクラスという機能を使っていて、管理をしやすくするためにファイルを分割しています</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>ファイル名</th>
+                        <th>用途</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>ICM45686_HAL.cpp</td>
+                        <td>センサーと通信するためのI2C関数の定義</td>
+                    </tr>
+                    <tr>
+                        <td>ICM45686_HAL.h</td>
+                        <td>ICM45686_HAL.cppに登録されている関数などの管理</td>
+                    </tr>
+                    <tr>
+                        <td>ICM45686.cpp</td>
+                        <td>定義した関数を使って設定や値取得をする関数の集まり</td>
+                    </tr>
+                    <tr>
+                        <td>ICM45686.h</td>
+                        <td>ICM45686.cppに登録されている関数などの管理</td>
+                    </tr>
+    
+                </tbody>
+            </table>
 
+            <p>例えば、I2C通信の関数はこれであるが</p>
+            <pre><code class="language-cpp">HAL_I2C_Mem_Read(&hi2c2, I2C_ADDR, REGISTER, 1, &receive_data, 1, 10);</code></pre>
+
+            <p>使うピンや相手のセンサーや待機時間は同じでいいので、同じ部分は直接入力したり、変数を使ったりして上書きのようなことをしている</p>
+            <pre><code class="language-cpp">void ICM45686_HAL::read(ICM45686_HAL::REGISTER REGISTER_ADDR, uint8_t* receive_buffer, uint8_t len){
+
+HAL_I2C_Mem_Read(i2c_pin, I2C_ADDR, uint8_t(REGISTER_ADDR), 1, receive_buffer, len, 1000);
+}</code></pre>
+
+            <p>これによって、ICM45686と通信をするときは短い関数を使ったり、指定したピンの番号を自動で入力してくれたりできる</p>
+            <p>I2Cアドレスなどを変えるだけで他のセンサーにも使いまわせるので、汎用性の高いプログラムにすることができる</p>
+        </details>  
         </details>  
 
 
         <h2>サンプルコード</h2>
-        <p>実際にサーボモータを回し続けるコードを作成した</p>
-        <p>0~2500の好きな値を指定できるので、色々な値を試してみよう</p>
-        <pre><code class="language-cpp">#include "wrapper.hpp"
-#include "tim.h"
+
+        <p>先ほどのリンク先のサンプルコードと同じコードです</p>
+        <p>実行してTeraTermで受信したデータを読んでみよう</p>
+
+        <p>send_data(gyro_data)とsend_data(accel_data)は片方ずつの方が読みやすいと思います</p>
+        <pre><code class="language-cpp">#include "ICM45686.h"
+#include "usart.h"
+#include "string"
+            
+ICM45686 icm(&hi2c3);
+            
+int16_t gyro_data[3];
+int16_t accel_data[3];
+            
+void send_data(int16_t data[3]);
 
 void init(){
-    
-    //タイマーの起動
-    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-    HAL_Delay(500);     
+
+    //センサーとの通信チェック
+    icm.verify_connection();
+
+    //加速度センサーの設定
+    icm.accel_mode(icm.mode::low_noize, icm.accel_scale::scale_02g, icm.odr::rate_0800hz);
+
+    //角速度センサーの設定
+    icm.gyro_mode(icm.mode::low_noize, icm.gyro_scale::scale_0250dps, icm.odr::rate_0800hz);
 }
-        
+
 void loop(){
-    
-    //値の設定
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 500);
-    HAL_Delay(100-);
-        
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 1000);
-    HAL_Delay(1000);
-        
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 1500);
-    HAL_Delay(1000);
-}</code></pre>
+
+    //データの取得
+    uint8_t is_get = icm.get_data(accel_data, gyro_data);
+
+    //取得に成功
+    if(is_get == 0){
+
+        //データの送信
+        send_data(gyro_data);
+        //send_data(accel_data);
+
+        //判定のクリア
+        is_get = 1;
+    }
+}
+
+//PCへデータを送信する
+void send_data(int16_t data[3]){
+
+std::string str;
+str = std::to_string(data[0]) + " " + std::to_string(data[1]) + " " + std::to_string(data[2]) + "\n";
+HAL_UART_Transmit(&huart2, (uint8_t *)str.c_str(),str.length(),100);
+}
+</code></pre>
 
         <h2>終わりに</h2>
-        <p>今回は、タイマーを使ってサーボモータを動かしてみました</p>
+        <p>今回は、実際にセンサーの値を読んでみました！</p>
+        <p>次回は、取得したデータを使ってセンサーの傾きの状態を表示してみます</p>
     </main>
     <footer>
         <p>&copy; 2025 東京農工大学 航空研究会</p>
